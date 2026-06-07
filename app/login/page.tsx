@@ -91,15 +91,17 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
-              <p className="text-sm text-muted-foreground text-center">
-                Don&apos;t have an account?{' '}
-                <Link
-                  href="/signup"
-                  className="text-purple-600 hover:underline font-medium"
-                >
-                  Sign up
+              <div className="flex justify-between w-full text-sm">
+                <Link href="/forgot-password" className="text-muted-foreground hover:underline">
+                  Forgot password?
                 </Link>
-              </p>
+                <p className="text-muted-foreground">
+                  New?{' '}
+                  <Link href="/signup" className="text-purple-600 hover:underline font-medium">
+                    Sign up
+                  </Link>
+                </p>
+              </div>
             </CardFooter>
           </form>
         </Card>
