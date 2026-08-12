@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { ensureProfile } from '@/lib/ensure-profile'
+import { humanizeDbError } from '@/lib/db-errors'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -88,17 +90,16 @@ Make the recommendation genuinely fitting for the mood. Be creative and specific
       )
     }
 
-    // Get user profile
-    const { data: userProfile } = await supabase
-      .from('blindpick_users')
-      .select('id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userProfile) {
+    // auth.users is shared across all ten apps in this project, and nothing
+    // created a BlindPick profile except this app's own signup form — so an
+    // account made elsewhere authenticates fine and then has no row to hang
+    // blindpick_picks.user_id off. This used to detect that and tell the user
+    // to contact support, which is a dead end for something we can just fix:
+    // provision the profile on first write instead.
+    if (!(await ensureProfile(user))) {
       return NextResponse.json(
-        { error: 'User profile not found. Please contact support.' },
-        { status: 404 }
+        { error: 'We could not finish setting up your BlindPick account. Please try again.' },
+        { status: 500 }
       )
     }
 
@@ -116,7 +117,11 @@ Make the recommendation genuinely fitting for the mood. Be creative and specific
       .single()
 
     if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 })
+      console.error('pick insert failed:', `${insertError.code ?? '?'}: ${insertError.message ?? '?'}`)
+      return NextResponse.json(
+        { error: humanizeDbError(insertError, 'Could not save your pick. Please try again.') },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({ pick })
